@@ -19,6 +19,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.venv/
 
 # Distribution / packaging
 *.egg
@@ -85,3 +86,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env
+
+# streamlit config files
+client/.streamlit/

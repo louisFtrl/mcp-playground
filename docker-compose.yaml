@@ -9,7 +9,7 @@ services:
       - ./servers/server1:/app
     ports:
       - "8000:8000"
-  
+
   mcpserver2:
     build: ./servers/server2
     container_name: mcpserver_2

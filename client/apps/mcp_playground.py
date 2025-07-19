@@ -1,6 +1,9 @@
 import os
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 import datetime
 import streamlit as st
+from urllib.parse import urlencode
 from langchain_core.messages import HumanMessage, ToolMessage
 from services.ai_service import get_response_stream
 from services.mcp_service import run_agent
@@ -11,9 +14,46 @@ import ui_components.sidebar_components as sd_compents
 from  ui_components.main_components import display_tool_executions
 from config import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 import traceback
+from services.google_oauth import get_authorization_url, get_flow, fetch_token
+import json
 
+
+# Load your client secret JSON string from Streamlit secrets
+CLIENT_SECRET_JSON = st.secrets["GOOGLE_OAUTH_CREDENTIALS"]["CLIENT_SECRET_JSON"]
+
+# Parse JSON string to dict
+CLIENT_CONFIG = json.loads(CLIENT_SECRET_JSON)
+
+# Redirect URI must match what you set in Google Console
+REDIRECT_URI = CLIENT_CONFIG["web"]["redirect_uris"][0]
 
 def main():
+    # --- Google OAuth Flow ---
+    query_params = st.query_params  # safer than experimental_get_query_params
+    if "credentials" not in st.session_state:
+        # If returned from Google with a code, fetch token
+        if "code" in query_params:
+            flow = get_flow()
+            query_string = urlencode(query_params, doseq=True)
+            authorization_response_url = REDIRECT_URI + "?" + query_string
+            credentials = fetch_token(flow, authorization_response_url)
+            st.session_state["credentials"] = credentials
+            st.success("✅ Connected to Google Drive!")
+            st.rerun()
+
+        else:
+            st.write("### Connect your Google Drive to access files or tools")
+            if st.button("Connect Google Drive"):
+                auth_url, state = get_authorization_url()
+                st.session_state["oauth_state"] = state  # Optionally save state
+                st.markdown(f"[Click here to authorize Google Drive]({auth_url})", unsafe_allow_html=True)
+                st.stop()
+    else:
+        st.success("✅ Google Drive Connected")
+        # Optional: display token expiry or info
+        # st.write(f"Access Token Expires: {st.session_state.credentials.expiry}")
+
+
     with st.sidebar:
         st.subheader("Chat History")
     sd_compents.create_history_chat_container()
@@ -47,7 +87,7 @@ def main():
 # ------------------------------------------------------------------ Main Logic
     if user_text is None:  # nothing submitted yet
         st.stop()
-    
+
     params = st.session_state.get('params')
     if not (
         params.get('api_key') or
@@ -86,8 +126,8 @@ def main():
                                 for tool_call in msg.tool_calls:
                                     # Find corresponding ToolMessage
                                     tool_output = next(
-                                        (m.content for m in response["messages"] 
-                                            if isinstance(m, ToolMessage) and 
+                                        (m.content for m in response["messages"]
+                                            if isinstance(m, ToolMessage) and
                                             m.tool_call_id == tool_call['id']),
                                         None
                                     )
@@ -125,8 +165,8 @@ def main():
                         llm_provider=st.session_state['params']['model_id'],
                         system=system_prompt,
                         temperature=st.session_state['params'].get('temperature', DEFAULT_TEMPERATURE),
-                        max_tokens=st.session_state['params'].get('max_tokens', DEFAULT_MAX_TOKENS), 
-                    )         
+                        max_tokens=st.session_state['params'].get('max_tokens', DEFAULT_MAX_TOKENS),
+                    )
                     with messages_container.chat_message("assistant"):
                         response = st.write_stream(response_stream)
                         response_dct = {"role": "assistant", "content": response}
@@ -137,5 +177,5 @@ def main():
                 st.stop()
         # Add assistant message to chat history
         _append_message_to_session(response_dct)
-            
+
     display_tool_executions()
