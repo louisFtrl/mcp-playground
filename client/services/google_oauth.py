@@ -9,7 +9,29 @@ CLIENT_SECRET_JSON = st.secrets["GOOGLE_OAUTH_CREDENTIALS"]["CLIENT_SECRET_JSON"
 CLIENT_CONFIG = json.loads(CLIENT_SECRET_JSON)
 
 # Scopes your app needs (adjust if needed)
-SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly"]
+SCOPES = [
+        # Gmail
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.metadata",
+
+        # Google Drive
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/drive.metadata.readonly",
+
+        # Google Docs
+        "https://www.googleapis.com/auth/documents.readonly",
+
+        # Google Sheets
+        "https://www.googleapis.com/auth/spreadsheets.readonly",
+
+        # Google Slides
+        "https://www.googleapis.com/auth/presentations.readonly",
+
+        # Google Calendar
+        "https://www.googleapis.com/auth/calendar.readonly",
+        "https://www.googleapis.com/auth/calendar.calendars.readonly",
+        "https://www.googleapis.com/auth/calendar.events.readonly"
+        ]
 
 # Redirect URI must match what you set in Google Console
 REDIRECT_URI = CLIENT_CONFIG["web"]["redirect_uris"][0]

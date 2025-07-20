@@ -16,6 +16,7 @@ from config import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE
 import traceback
 from services.google_oauth import get_authorization_url, get_flow, fetch_token
 import json
+import pytz
 
 
 # Load your client secret JSON string from Streamlit secrets
@@ -39,6 +40,7 @@ def main():
             credentials = fetch_token(flow, authorization_response_url)
             st.session_state["credentials"] = credentials
             st.success("✅ Connected to Google Drive!")
+            st.query_params.clear()
             st.rerun()
 
         else:
@@ -50,8 +52,23 @@ def main():
                 st.stop()
     else:
         st.success("✅ Google Drive Connected")
-        # Optional: display token expiry or info
-        # st.write(f"Access Token Expires: {st.session_state.credentials.expiry}")
+
+        # Display token expiry info if available
+        expiry = getattr(st.session_state["credentials"], "expiry", None)
+        if expiry:
+            # Convert expiry (assumed UTC) to Paris timezone
+            paris_tz = pytz.timezone("Europe/Paris")
+            expiry_paris = expiry.astimezone(paris_tz)
+
+            # Format expiry as readable string
+            expiry_str = expiry_paris.strftime("%Y-%m-%d %H:%M:%S %Z%z")
+            st.info(f"Access Token Expires (Paris Time): {expiry_str}")
+
+        # Add a logout button to clear credentials
+        if st.button("Logout"):
+            del st.session_state["credentials"]
+            st.success("Logged out successfully.")
+            st.rerun()
 
 
     with st.sidebar:
@@ -116,7 +133,8 @@ def main():
             try:
                 # If agent is available, use it
                 if st.session_state.agent:
-                    response = run_async(run_agent(st.session_state.agent, user_text))
+                    access_token = st.session_state["credentials"].token
+                    response = run_async(run_agent(st.session_state.agent, f"{user_text}\n\n[Access Token: {access_token}]"))
                     tool_output = None
                     # Extract tool executions if available
                     if "messages" in response:

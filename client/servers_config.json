@@ -13,6 +13,13 @@
       "timeout": 600,
       "headers": null,
       "sse_read_timeout": 900
+    },
+    "GoogleAPI": {
+      "transport": "sse",
+      "url": "http://mcpserver3:8002/sse",
+      "timeout": 600,
+      "headers": null,
+      "sse_read_timeout": 900
     }
   }
 }

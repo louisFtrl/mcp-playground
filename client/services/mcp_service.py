@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 import streamlit as st
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -17,9 +17,15 @@ async def get_tools_from_client(client: MultiServerMCPClient) -> List[BaseTool]:
     """Get tools from the MCP client."""
     return client.get_tools()
 
+async def execute_tool_with_context(tool_func, tool_args: dict, extra_context: dict):
+    if 'access_token' not in tool_args and 'access_token' in extra_context:
+        tool_args['access_token'] = extra_context['access_token']
+    return await tool_func.ainvoke(**tool_args)
+
 async def run_agent(agent, message: str) -> Dict:
-    """Run the agent with the provided message."""
-    return await agent.ainvoke({"messages": message})
+    """Run the agent with the provided message and optional context."""
+    payload = {"messages": message}
+    return await agent.ainvoke(payload)
 
 async def run_tool(tool, **kwargs):
     """Run a tool with the provided parameters."""
@@ -44,19 +50,19 @@ def connect_to_mcp_servers():
         st.error(f"Failed to initialize LLM: {e}")
         st.stop()
         return
-    
+
     # Setup new client
     st.session_state.client = run_async(setup_mcp_client(st.session_state.servers))
     st.session_state.tools = run_async(get_tools_from_client(st.session_state.client))
     st.session_state.agent = create_react_agent(llm, st.session_state.tools)
-        
+
 
 def disconnect_from_mcp_servers():
     # Clean up existing client if any and session state connections
     client = st.session_state.get("client")
     if client:
         try:
-            run_async(client.__aexit__(None, None, None))    
+            run_async(client.__aexit__(None, None, None))
         except Exception as e:
             st.warning(f"Error during disconnect: {str(e)}")
     else:

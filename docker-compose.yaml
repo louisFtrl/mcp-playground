@@ -19,6 +19,15 @@ services:
     ports:
       - "8001:8001"
 
+  mcpserver3:
+    build: ./servers/server3
+    container_name: mcpserver_3
+    restart: always
+    volumes:
+      - ./servers/server3:/app
+    ports:
+      - "8002:8002"
+
   hostclient:
     build: ./client
     container_name: hostclient
